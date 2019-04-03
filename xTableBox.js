@@ -1,94 +1,10 @@
-var lista_tabelas_array=[];
-
-define( ["qlik", "jquery", "text!./style.css", "util"], function (qlik, $, cssContent, engine, util) {
+define( ["qlik", "jquery", "text!./style.css","core.models/engine", "util"], function (qlik, $, cssContent, engine, util) {
 	'use strict';
 	
   	$( "<style>" ).html( cssContent ).appendTo( "head" );
-  	var app =qlik.currApp(this);
-  	//var app = engine.currentApp;
-
-
-  	app.createCube({
-	"qInitialDataFetch": [
-		{
-			"qHeight": 1000,
-			"qWidth": 6
-		}
-	],
-
-
-	"qDimensions": [
-		{
-			"qDef": {
-				"qFieldDefs": [
-					"=[$Table]"
-				]
-			},
-			"qNullSuppression": false,
-			"qOtherTotalSpec": {
-				"qOtherMode": "OTHER_OFF",
-				"qSuppressOther": false,
-				"qOtherSortMode": "OTHER_SORT_DESCENDING",
-				"qOtherCounted": {
-					"qv": "5"
-				},
-				"qOtherLimitMode": "OTHER_GE_LIMIT"
-			}
-		},
-		{
-			"qDef": {
-				"qFieldDefs": [
-					"=[$Field]"
-				]
-			},
-			"qNullSuppression": false,
-			"qOtherTotalSpec": {
-				"qOtherMode": "OTHER_OFF",
-				"qSuppressOther": false,
-				"qOtherSortMode": "OTHER_SORT_DESCENDING",
-				"qOtherCounted": {
-					"qv": "5"
-				},
-				"qOtherLimitMode": "OTHER_GE_LIMIT"
-			}
-		}
-	],
-	
-	"qMeasures": [
-		{
-			"qDef": {
-				"qDef": "=1"
-			},
-			"qLabel": "tabelas",
-			"qLibraryId": null,
-			"qSortBy": {
-				"qSortByState": 0,
-				"qSortByFrequency": 0,
-				"qSortByNumeric": 0,
-				"qSortByAscii": 0,
-				"qSortByLoadOrder": -1,
-				"qSortByExpression": 0,
-				"qExpression": {
-					"qv": " "
-				}
-			}
-		}
-	],
-	"qSuppressZero": false,
-	"qSuppressMissing": false,
-	"qMode": "S",
-	"qInterColumnSortOrder": [],
-	"qStateName": "$"
-},teste);
-function teste(reply, app){
-	var lista_tabelas =reply.qHyperCube.qDataPages[0].qMatrix;
-	lista_tabelas_array=[];
-	$.each(lista_tabelas, function(index, value) {
-		lista_tabelas_array.push({'Table':this[0].qText , 'Field':this[1].qText});
-
-	});
-
- }
+  
+  	var app = engine.currentApp;
+  
   	var qWindowSize = {
 			qcx : 1000,
 			qcy : 1000
@@ -299,8 +215,11 @@ function teste(reply, app){
 			}
 
 		  
-			// Populate the dropdown.	
-			$('#tableSelector_'+id)
+			// Populate the dropdown.		  
+		  	app.getTablesAndKeys(qWindowSize, qNullSize, 0, false, false).then(function(tables) {
+				
+		  		qtr = tables.qtr;
+			  	$('#tableSelector_'+id)
 						.find('option')
     					.remove()
     					.end()
@@ -308,21 +227,15 @@ function teste(reply, app){
     						value: '-',
     						text: '-'
 						}));
-			$.each(lista_tabelas_array, function(key, table) { 
-
-		  	//app.getTablesAndKeys(qWindowSize, qNullSize, 0, false, false).then(function(tables) {
-				
-		  		
-			  	
 			  
-				
+				$.each(qtr, function(key, table) {   
 		   			$('#tableSelector_'+id)
-			   			.append($("<option></option>"))
-			   			.attr("value",table.Table)
-						.prop("selected", (selectedTable == table.Table ? true : false))
-			   			.text(table.Table); 
+			   			.append($("<option></option>")
+			   			.attr("value",table.qName)
+						.prop("selected", (selectedTable == table.qName ? true : false))
+			   			.text(table.qName)); 
 	  			});
-	  		
+	  		});
 		  
 		  
 		  	// Handle drag and select
@@ -411,11 +324,11 @@ function teste(reply, app){
 				  		console.log("japp");
 						//var tmpDimension = $.extend(true,{},reply.qHyperCubeDef.qDimensions[0]);
 						var dimensions = [];
-						$.each(lista_tabelas_array, function(key, table) {  
-							if(table.Table == selectedTable) {
-								reply.qHyperCubeDef.qInitialDataFetch[0].qWidth = 1000;
+						$.each(qtr, function(key, table) {  
+							if(table.qName == selectedTable) {
+								reply.qHyperCubeDef.qInitialDataFetch[0].qWidth = table.qFields.length;
 					  		
-								$.each(table.Field, function(key, column) {
+								$.each(table.qFields, function(key, column) {
 									var tmpDimension = JSON.parse('{"qDef":{"qGrouping":"N","qFieldDefs":"","qFieldLabels":[""],"qSortCriterias":[{"qSortByAscii":1,"qSortByLoadOrder":1,"qExpression":{}}],"qNumberPresentations":[],"qActiveField":0,"autoSort":true,"cId":"","othersLabel":"Övriga"},"qOtherTotalSpec":{"qOtherMode":"OTHER_OFF","qOtherCounted":{"qv":"10"},"qOtherLimit":{"qv":"0"},"qOtherLimitMode":"OTHER_GE_LIMIT","qForceBadValueKeeping":true,"qApplyEvenWhenPossiblyWrongResult":true,"qOtherSortMode":"OTHER_SORT_DESCENDING","qTotalMode":"TOTAL_OFF","qReferencedExpression":{}},"qOtherLabel":{},"qTotalLabel":{},"qCalcCond":{}}');
 								  	tmpDimension.qDef.cId = util.generateId();
 									tmpDimension.qDef.qFieldDefs = [column.qName];
